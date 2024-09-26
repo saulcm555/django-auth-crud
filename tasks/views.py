@@ -57,20 +57,17 @@ def signin(request):
 @login_required
 def create_task(request):
     if request.method == 'GET':
-        return render(request, 'create_task.html', 
-                  {'form': TaskForm
-    })
+        return render(request, 'create_task.html', {'form': TaskForm()})
     else:
-        try:
-            form = TaskForm(request.POST)
+        form = TaskForm(request.POST)
+        if form.is_valid():  # Verifica si el formulario es válido
             new_task = form.save(commit=False)
             new_task.user = request.user
             new_task.save()
-            return redirect('tasks')
-        except ValueError:
-             return render(request, 'create_task.html', 
-                  {'form': TaskForm, 'error':'Por favor provee datos validos'
-                   })
+            return redirect('important_tasks' if new_task.important else 'tasks')  
+        else:
+            return render(request, 'create_task.html', {'form': form, 'error': 'Por favor provee datos válidos'})
+
 
 @login_required
 def task_detail(request, task_id,):
@@ -104,11 +101,13 @@ def delete_task(request, task_id):
         task.delete()
         return redirect('tasks')
 
-@login_required 
+@login_required
 def tasks_completed(request):
-    tasks = Task.objects.filter(user=request.user, datecompleted__isnull=False).order_by
-    ('-datecompleted')
-    return render(request, 'tasks.html', {'tasks':tasks})
+    tasks = Task.objects.filter(user=request.user, datecompleted__isnull=False).order_by('-datecompleted')  # Corrección aquí
+    return render(request, 'tasks.html', {'tasks': tasks})
 
-       
 
+@login_required
+def important_tasks(request):
+    tasks = Task.objects.filter(user=request.user, important=True)
+    return render(request, 'important_tasks.html', {'tasks': tasks})
